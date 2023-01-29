@@ -94,21 +94,21 @@ void keyboardFunc (unsigned char key, int x, int y)
       exit(0);
       break;
 
-    case 'e':
+    case 'e': // reset camera?
       Theta = pi / 6;
       Phi = pi / 6;
       viewingMode = 0;
       break;
 
-    case 'v':
+    case 'v': // toggle viewingMode
       viewingMode = 1 - viewingMode;
       break;
 
-    case 'h':
+    case 'h': // toggle shear
       shear = 1 - shear;
       break;
 
-    case 's':
+    case 's': // toggle sturcutural
       structural = 1 - structural;
       break;
 
@@ -120,18 +120,18 @@ void keyboardFunc (unsigned char key, int x, int y)
       pause = 1 - pause;
       break;
 
-    case 'z':
+    case 'z': // move camera closer
       R -= 0.2;
       if (R < 0.2)
         R = 0.2;
       break;
 
-    case 'x':
+    case 'x': // pull camera away
       R += 0.2;
       break;
 
     case ' ':
-      saveScreenToFile = 1 - saveScreenToFile;
+      saveScreenToFile = 1 - saveScreenToFile; 
       break;
   }
 }

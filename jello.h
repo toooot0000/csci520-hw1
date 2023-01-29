@@ -54,8 +54,10 @@ struct world
   double a,b,c,d; // inclined plane has equation a * x + b * y + c * z + d = 0; if no inclined plane, these four fields are not used
   int resolution; // resolution for the 3d grid specifying the external force field; value of 0 means that there is no force field
   struct point * forceField; // pointer to the array of values of the force field
-  struct point p[8][8][8]; // position of the 512 control points
-  struct point v[8][8][8]; // velocities of the 512 control points
+  // position of the 512 control points
+  struct point p[8][8][8]; 
+  // velocities of the 512 control points
+  struct point v[8][8][8]; 
 };
 
 extern struct world jello;

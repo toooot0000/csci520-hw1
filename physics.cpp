@@ -7,13 +7,223 @@
 
 #include "jello.h"
 #include "physics.h"
+#include "Vector3.h"
+
+
+static inline void computeHookForceOnA(
+    const Vector3 &a, 
+    const Vector3 &b, 
+    double rest, 
+    double kHook,
+    Vector3& accRet
+) {
+    auto l = a - b;
+    accRet += - kHook * (l.length() - rest) * l.normalized();
+}
+
+static inline void computDampingForce(
+    const Vector3& a,
+    const Vector3& b,
+    const Vector3& va,
+    const Vector3& vb,
+    double kd,
+    Vector3& accRet
+) {
+    auto l = a - b;
+    accRet += - kd * ((va - vb)*l) / l.length() * l.normalized();
+}
+
+/// <summary>
+/// Check i, j, k boundry. if inside the index boundry, ret the position and velocity.
+/// </summary>
+/// <param name="jello"></param>
+/// <param name="i"></param>
+/// <param name="j"></param>
+/// <param name="k"></param>
+/// <param name="retPos"></param>
+/// <param name="retVel"></param>
+/// <returns></returns>
+static inline bool getPosAndVel(
+    struct world* jello,
+    int i, int j, int k,
+    Vector3& retPos,
+    Vector3& retVel
+) {
+#define guard(x) do{ if(x < 0 || x >= 8) return false; } while(0);
+    guard(i);
+    guard(j);
+    guard(k);
+    retPos.copyFrom(jello->p[i][j][k]);
+    retVel.copyFrom(jello->v[i][j][k]);
+    return true;
+#undef guard
+}
+
+
+
+static void computeInnerForce(
+    struct world* jello,
+    int i, int j, int k,
+    Vector3 &ret
+) {
+    Vector3 a, b, va, vb;
+    auto rest = 1.0 / 7.0;
+    getPosAndVel(jello, i, j, k, a, va);
+
+#define compute_spring(i, j, k) do{ if (getPosAndVel(jello, i, j, k, b, vb)) {\
+    computeHookForceOnA(a, b, rest, jello->kElastic, ret);\
+    computDampingForce(a, b, va, vb, jello->dElastic, ret);\
+}} while(0)
+    // structual force
+    compute_spring(i - 1, j, k);
+    compute_spring(i + 1, j, k);
+    compute_spring(i, j - 1, k);
+    compute_spring(i, j + 1, k);
+    compute_spring(i, j, k - 1);
+    compute_spring(i, j, k + 1);
+
+    // shear force
+    rest = sqrt(2.0) / 7.0;
+    compute_spring(i - 1, j - 1, k);
+    compute_spring(i - 1, j + 1, k);
+    compute_spring(i - 1, j, k - 1);
+    compute_spring(i - 1, j, k + 1);
+    compute_spring(i + 1, j - 1, k);
+    compute_spring(i + 1, j + 1, k);
+    compute_spring(i + 1, j, k - 1);
+    compute_spring(i + 1, j, k + 1);
+    compute_spring(i, j - 1, k - 1);
+    compute_spring(i, j - 1, k + 1);
+    compute_spring(i, j + 1, k - 1);
+    compute_spring(i, j + 1, k + 1);
+
+    // diagnal force
+    rest = sqrt(3.0) / 7.0;
+    compute_spring(i - 1, j - 1, k - 1);
+    compute_spring(i - 1, j - 1, k + 1);
+    compute_spring(i - 1, j + 1, k - 1);
+    compute_spring(i - 1, j + 1, k + 1);
+    compute_spring(i + 1, j - 1, k - 1);
+    compute_spring(i + 1, j - 1, k + 1);
+    compute_spring(i + 1, j + 1, k - 1);
+    compute_spring(i + 1, j + 1, k + 1);
+
+
+    // bend force
+    rest = 2.0/7.0;
+    compute_spring(i - 2, j, k);
+    compute_spring(i + 2, j, k);
+    compute_spring(i, j - 2, k);
+    compute_spring(i, j + 2, k);
+    compute_spring(i, j, k - 2);
+    compute_spring(i, j, k + 2);
+
+    /*if (getPosAndVel(jello, i - 1, j, k, b, vb)) {
+        computeHookForceOnA(a, b, rest, jello->kElastic, ret);
+        computDampingForce(a, b, va, vb, jello->dElastic, ret);
+    }*/
+#undef compute_neighbor
+}
+
+
+static inline void TrilinearInterpolation(
+    const Vector3& a,
+    const Vector3& b,
+    const Vector3& c,
+    const Vector3& d,
+    const Vector3& e,
+    const Vector3& f,
+    const Vector3& g,
+    const Vector3& factor,
+    Vector3& ret
+) {
+
+}
+
+
+static inline bool getPlaneCollision(
+    double a, double b, double c, double d,
+    const Vector3& p,
+    Vector3& ret
+) {
+    auto btm = a * a + b * b + c * c;
+    if (fabs(btm) < 0.00000001) return false;
+    auto point = p.point();
+    auto t = -(a * point.x + b * point.y + c * point.z + d) / (btm);
+    if (t > 0) {
+        ret = {point.x + a * t, point.y + b * t, point.z + c * t};
+        return true;
+    }
+    else return false;
+}
+
+/// <summary>
+/// Calculate if hitting bound, if hit, assign the bounding point to ret
+/// </summary>
+/// <param name="pos">tested position</param>
+/// <param name="ret">hitting point on the surface of the bound</param>
+/// <returns></returns>
+static inline bool getBoundCollision(
+    const Vector3& pos,
+    Vector3& ret
+) {
+    if (pos.x() < -2) {
+        ret = { -2, pos.y(), pos.z() };
+        return true;
+    }
+    else if (pos.x() > 2) {
+        ret = { 2, pos.y(), pos.z() };
+        return true;
+    } else if (pos.y() < -2) {
+        ret = { pos.x(), -2, pos.z()};
+        return true;
+    }
+    else if (pos.y() > 2) {
+        ret = { pos.x(), 2, pos.z() };
+        return true;
+    }
+    else if (pos.z() < -2) {
+        ret = { pos.x(), pos.y(), -2};
+        return true;
+    }
+    else if (pos.z() > 2) {
+        ret = { pos.x(), pos.y(), 2};
+        return true;
+    }
+    return false;
+}
+
+static void computeCollision(
+    struct world* jello,
+    int i, int j, int k,
+    Vector3& accRet
+) {
+    Vector3 a, b, va;
+    if (!getPosAndVel(jello, i, j, k, a, va)) return;
+    if (!getBoundCollision(a, b)) return;
+    auto &vb = Vector3::zero();
+    computeHookForceOnA(a, b, 0, jello->kCollision, accRet);
+    computDampingForce(a, b, va, vb, jello->dCollision, accRet);
+}
 
 /* Computes acceleration to every control point of the jello cube, 
    which is in state given by 'jello'.
-   Returns result in array 'a'. */
-void computeAcceleration(struct world * jello, struct point a[8][8][8])
+   Returns result in array 'acc'. */
+void computeAcceleration(struct world * jello, struct point acc[8][8][8])
 {
   /* for you to implement ... */
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            for (int k = 0; k < 8; k++) {
+                Vector3 cur{ acc[i][j][k] };
+                cur.reset();
+                computeInnerForce(jello, i, j, k, cur);
+                computeCollision(jello, i, j, k, cur);
+                cur *= 1.0/jello->mass; 
+            }
+        }
+    }
+    
 }
 
 /* performs one step of Euler Integration */
@@ -65,13 +275,13 @@ void RK4(struct world * jello)
       {
          pMULTIPLY(jello->v[i][j][k],jello->dt,F1p[i][j][k]);
          pMULTIPLY(a[i][j][k],jello->dt,F1v[i][j][k]);
-         pMULTIPLY(F1p[i][j][k],0.5,buffer.p[i][j][k]);
-         pMULTIPLY(F1v[i][j][k],0.5,buffer.v[i][j][k]);
-         pSUM(jello->p[i][j][k],buffer.p[i][j][k],buffer.p[i][j][k]);
-         pSUM(jello->v[i][j][k],buffer.v[i][j][k],buffer.v[i][j][k]);
+         pMULTIPLY(F1p[i][j][k], 0.5, buffer.p[i][j][k]);
+         pMULTIPLY(F1v[i][j][k], 0.5, buffer.v[i][j][k]);
+         pSUM(jello->p[i][j][k], buffer.p[i][j][k], buffer.p[i][j][k]);
+         pSUM(jello->v[i][j][k], buffer.v[i][j][k], buffer.v[i][j][k]);
       }
 
-  computeAcceleration(&buffer, a);
+  computeAcceleration(&buffer, a); 
 
   for (i=0; i<=7; i++)
     for (j=0; j<=7; j++)
