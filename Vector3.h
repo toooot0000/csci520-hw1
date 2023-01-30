@@ -6,8 +6,7 @@
 class Vector3
 {
 private:
- 	struct point &_p;
-	bool selfManaged = false;
+ 	struct point *_p;
 	static Vector3 _zero;
 
 public:
@@ -15,49 +14,80 @@ public:
 		return _zero;
 	}
 
-#define X _p.x
-#define Y _p.y
-#define Z _p.z
+#define X _p->x
+#define Y _p->y
+#define Z _p->z
 
-	Vector3() : _p(*(new struct point())), selfManaged(true){};
+	/// <summary>
+	/// will create a point
+	/// </summary>
+	Vector3() : _p(new struct point()){};
 
 	~Vector3() {
-		if (!selfManaged) return;
-		delete &_p;
+		if (!_p) return;
+		delete _p;
 	}
-
-	inline Vector3(double x, double y, double z): _p(*(new struct point())), selfManaged(true){
+	/// <summary>
+	/// Self managed
+	/// </summary>
+	/// <param name="x"></param>
+	/// <param name="y"></param>
+	/// <param name="z"></param>
+	inline Vector3(double x, double y, double z): _p(new struct point()){
 		X = x; Y = y; Z = z;
 	}
 
-	inline Vector3(struct point& p):_p(p){}
-
-	inline Vector3(const struct point& other) : _p(*(new struct point())), selfManaged(true) {
+	/// <summary>
+	/// Copied from other, create new
+	/// </summary>
+	/// <param name="other"></param>
+	inline Vector3(const struct point& other) : _p((new struct point())) {
 		X = other.x; Y = other.y; Z = other.z;
 	}
 
-	inline Vector3(const Vector3& other):_p(other._p){
-		X = other.X;
-		Y = other.Y;
-		Z = other.Z;
+	/// <summary>
+	/// use other's point structure
+	/// </summary>
+	inline Vector3(const Vector3& other): _p((new struct point())) {
+		X = other.X; Y = other.Y; Z = other.Z;
 	}
 
-	inline Vector3(Vector3&& other) noexcept : _p(other._p) {
-		other.selfManaged = false;
+
+	/// <summary>
+	/// Other will not be self managed.
+	/// </summary>
+	/// <param name="newVal"></param>
+	/// <returns></returns>
+	inline Vector3(Vector3&& other) noexcept : _p(other._p){
+		other._p = nullptr;
 	}
 
-	inline void operator=(const Vector3& other) = delete;
+	/// <summary>
+	/// No copy
+	/// </summary>
+	inline void operator=(const Vector3& other) {
+		X = other.X; Y = other.Y; Z = other.Z;
+	};
 
+
+	/// <summary>
+	/// Only Move
+	/// </summary>
 	inline void operator=(Vector3&& other) noexcept {
 		_p = other._p;
-		other.selfManaged = false;
+		other._p = nullptr;
 	}
 	
 	inline double x() const { return X; }
 	inline double y() const { return Y; }
 	inline double z() const { return Z; }
 
-	inline const struct point& point() const { return _p; }
+	inline void x(double newVal) { X = newVal; }
+	inline void y(double newVal) { Y = newVal; }
+	inline void z(double newVal) { Z = newVal; }
+
+
+	inline const struct point& point() const { return *_p; }
 	
 	inline Vector3 operator*(double other) const{
 		return { X * other, Y * other, Z * other };

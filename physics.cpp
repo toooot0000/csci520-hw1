@@ -8,6 +8,7 @@
 #include "jello.h"
 #include "physics.h"
 #include "Vector3.h"
+#include <cmath>
 
 
 static inline void computeHookForceOnA(
@@ -110,7 +111,7 @@ static void computeInnerForce(
 
 
     // bend force
-    rest = 2.0/7.0;
+    rest = 1.9/7.0;
     compute_spring(i - 2, j, k);
     compute_spring(i + 2, j, k);
     compute_spring(i, j - 2, k);
@@ -125,21 +126,82 @@ static void computeInnerForce(
 #undef compute_neighbor
 }
 
+typedef Vector3 NeighborForce[8];
 
-static inline void TrilinearInterpolation(
-    const Vector3& a,
-    const Vector3& b,
-    const Vector3& c,
-    const Vector3& d,
-    const Vector3& e,
-    const Vector3& f,
-    const Vector3& g,
+/*
+* Force field ret index
+*           011---------111
+*           /|          /|
+*          / |         / |
+*         /  |        /  |
+*       001---------101  |
+*        |  010----- | -110
+*        |  /        |  /
+*        | /         | /  
+*        |/          |/
+*       000---------100
+* 
+* params is the uniformed distance to (000)
+* 
+*/     
+
+
+
+static inline void getForce(
+    const struct world& jello,
+    const Vector3& pos,
+    NeighborForce& retForce,
+    Vector3& retParams
+) {
+#define clamp(x, lo, hi) ((x)<(lo) ? (lo) : ( (x) > (hi)? (hi) : (x)))
+#define set_index(var, axis) do{ \
+    var = (unsigned)floor(clamp(pos.axis() + 2.0, 0.0, 4.0) * intervalInverse); \
+    var = clamp(var, 0, jello.resolution-2);\
+    retParams.axis( (pos.axis() + 2.0 - (var * interval)) * intervalInverse ) ;\
+}while(0)
+#define bit_check(ind, bit) ((int)((ind) & (1 << (bit)) > 0))
+#define get_force(i, j, k) (jello.forceField[(i) * resSqr + (j) * jello.resolution + (k)])
+
+    const auto resSqr = jello.resolution * jello.resolution;
+    const auto intervalInverse = (jello.resolution - 1) * 0.25;
+    const auto interval = 4.0 / (jello.resolution - 1);
+    int i, j, k;
+    set_index(i, x);
+    set_index(j, y);
+    set_index(k, z);
+    for (int ind = 0; ind < 8; ind++) {
+        retForce[ind] = { get_force(i + bit_check(ind, 0), j + bit_check(ind, 1), k + bit_check(ind, 2)) };
+    }
+#undef clamp
+#undef set_index
+#undef get_force
+#undef bit_check
+}
+
+static inline void trilinearInterpolation(
+    const NeighborForce& forces,
     const Vector3& factor,
     Vector3& ret
 ) {
-
+#define bit_check(ind, axis, bit) (((ind) & (1 << (bit)) > 0) ? (1 - factor.axis()) : factor.axis() )
+    for (int i = 0; i < 8; i++) {
+        auto f = bit_check(i, x, 0) * bit_check(i, y, 1) * bit_check(i, z, 2);
+        ret += forces[i] * f;
+    }
+#undef bit_check
 }
 
+static void computeForceField(
+    struct world* jello,
+    int i, int j, int k,
+    Vector3& accRet
+) {
+    const Vector3& a = { jello->p[i][j][k] };
+    NeighborForce forces;
+    Vector3 params;
+    getForce(*jello, a, forces, params);
+    trilinearInterpolation(forces, params, accRet);
+}
 
 static inline bool getPlaneCollision(
     double a, double b, double c, double d,
@@ -206,6 +268,7 @@ static void computeCollision(
     computDampingForce(a, b, va, vb, jello->dCollision, accRet);
 }
 
+
 /* Computes acceleration to every control point of the jello cube, 
    which is in state given by 'jello'.
    Returns result in array 'acc'. */
@@ -215,11 +278,12 @@ void computeAcceleration(struct world * jello, struct point acc[8][8][8])
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
             for (int k = 0; k < 8; k++) {
-                Vector3 cur{ acc[i][j][k] };
-                cur.reset();
+                Vector3 cur;
                 computeInnerForce(jello, i, j, k, cur);
                 computeCollision(jello, i, j, k, cur);
+                computeForceField(jello, i, j, k, cur);
                 cur *= 1.0/jello->mass; 
+                acc[i][j][k] = cur.point();
             }
         }
     }

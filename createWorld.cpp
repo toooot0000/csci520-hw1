@@ -134,10 +134,10 @@ int main()
   strcpy(jello.integrator,"RK4");
   jello.dt=0.0005000;
   jello.n=1;
-  jello.kElastic=200;
-  jello.dElastic=0.25;
-  jello.kCollision=400.0;
-  jello.dCollision=0.25;
+  jello.kElastic=520;
+  jello.dElastic=0.5;
+  jello.kCollision=700.0;
+  jello.dCollision=0.3;
   jello.mass= 1.0 / 512;
 
   // set the inclined plane (not used in this assignment; ignore)
@@ -166,7 +166,7 @@ int main()
         jello.forceField[i * jello.resolution * jello.resolution 
           + j * jello.resolution + k].y = 0;
         jello.forceField[i * jello.resolution * jello.resolution 
-          + j * jello.resolution + k].z = 0;
+          + j * jello.resolution + k].z = -2.5;
       }
 
   // set the positions of control points
