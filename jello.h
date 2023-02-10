@@ -35,6 +35,12 @@ struct point
    double x;
    double y;
    double z;
+
+   inline void operator*=(double f) {
+       x *= f;
+       y *= f;
+       z *= f;
+   }
 };
 
 // these variables control what is displayed on the screen

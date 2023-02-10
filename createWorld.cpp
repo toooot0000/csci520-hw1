@@ -132,12 +132,12 @@ int main()
   // set the integrator and the physical parameters
   // the values below are EXAMPLES, to be modified by you as needed
   strcpy(jello.integrator,"RK4");
-  jello.dt=0.0005000;
+  jello.dt=0.0004000;
   jello.n=1;
-  jello.kElastic=520;
-  jello.dElastic=0.5;
-  jello.kCollision=700.0;
-  jello.dCollision=0.3;
+  jello.kElastic=200;
+  jello.dElastic=0.25;
+  jello.kCollision=400.0;
+  jello.dCollision=0.25;
   jello.mass= 1.0 / 512;
 
   // set the inclined plane (not used in this assignment; ignore)
@@ -145,10 +145,10 @@ int main()
   jello.a=-1;
   jello.b=1;
   jello.c=1;
-  jello.d=2;
+  jello.d=3;
 
   // set the external force field
-  jello.resolution=30;
+  jello.resolution=2;
   jello.forceField = 
     (struct point *)malloc(jello.resolution*jello.resolution*jello.resolution*sizeof(struct point));
   for (i=0; i<= jello.resolution-1; i++)
@@ -166,7 +166,7 @@ int main()
         jello.forceField[i * jello.resolution * jello.resolution 
           + j * jello.resolution + k].y = 0;
         jello.forceField[i * jello.resolution * jello.resolution 
-          + j * jello.resolution + k].z = -2.5;
+          + j * jello.resolution + k].z = 0;
       }
 
   // set the positions of control points
