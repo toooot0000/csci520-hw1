@@ -132,6 +132,7 @@
   <ItemGroup>
     <ClInclude Include="input.h" />
     <ClInclude Include="jello.h" />
+    <ClInclude Include="Mat.h" />
     <ClInclude Include="openGL-headers.h" />
     <ClInclude Include="physics.h" />
     <ClInclude Include="pic.h" />
@@ -141,6 +142,7 @@
   <ItemGroup>
     <ClCompile Include="input.cpp" />
     <ClCompile Include="jello.cpp" />
+    <ClCompile Include="Mat.cpp" />
     <ClCompile Include="physics.cpp" />
     <ClCompile Include="pic.cpp" />
     <ClCompile Include="ppm.cpp" />

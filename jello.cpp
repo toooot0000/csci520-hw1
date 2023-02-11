@@ -12,6 +12,7 @@
 #include "showCube.h"
 #include "input.h"
 #include "physics.h"
+#include "Mat.h"
 
 // camera parameters
 double Theta = pi / 6;
@@ -33,11 +34,53 @@ struct world jello;
 
 int windowWidth, windowHeight;
 
+double projection[4][4], view[4][4], inv[4][4], mvp[4][4];
+
+
+void updateMatrices() {
+    glGetDoublev(GL_MODELVIEW_MATRIX, &(view[0][0]));
+    glGetDoublev(GL_PROJECTION_MATRIX, &(projection[0][0])); 
+    multiply(view, projection, mvp);
+    inverse(mvp, inv);
+}
+
+const double hitRange = 0.07;
+const double MAX_RANGE = 1000000000000;
+
+static double checkCollision(const Vector3& eye, const Vector3& dir, const Vector3& point) {
+    Vector3 ep = eye - point;
+    double t = -dir.dot(ep);
+    if (ep.dot(ep) - t * t <= hitRange * hitRange) {
+        return t;
+    }
+    return MAX_RANGE;
+}
+
+bool rayCast(const world& world, const Vector3& ray, const Vector3& eye, int &ii, int &jj, int &kk) {
+    double temp = MAX_RANGE, minRange = MAX_RANGE;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            for (int k = 0; k < 8; k++) {
+                Vector3 point(world.p[i][j][k]);
+                if ((temp = checkCollision(eye, ray, point)) == MAX_RANGE) continue;
+                if (temp > minRange) continue;
+                minRange = temp;
+                ii = i;
+                jj = j;
+                kk = k;
+            }
+        }
+    }
+    return minRange != MAX_RANGE;
+}
+
 void myinit()
 {
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   gluPerspective(90.0,1.0,0.01,1000.0);
+
+  updateMatrices();
 
   // set background color to grey
   glClearColor(0.5, 0.5, 0.5, 0.0);
@@ -74,6 +117,8 @@ void reshape(int w, int h)
   windowWidth = w;
   windowHeight = h;
 
+  updateMatrices();
+
   glutPostRedisplay();
 }
 
@@ -87,7 +132,6 @@ void display()
   // camera parameters are Phi, Theta, R
   gluLookAt(R * cos(Phi) * cos (Theta), R * sin(Phi) * cos (Theta), R * sin (Theta),
 	        0.0,0.0,0.0, 0.0,0.0,1.0);
-
 
   /* Lighting */
   /* You are encouraged to change lighting parameters or make improvements/modifications

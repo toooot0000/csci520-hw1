@@ -1,5 +1,6 @@
 #pragma once
 #include "jello.h"
+#include <stdio.h>
 #include <math.h>
 
 
@@ -175,6 +176,57 @@ public:
 		Z = clamp(Z, low, high);
 #undef clamp
 	}
+	inline void set(size_t index, double val) {
+		switch (index) {
+		case 0: 
+			X = val;
+			break;
+		case 1:
+			Y = val;
+			break;
+		case 2: 
+			Z = val;
+			break;
+		}
+	}
+
+	inline double get(size_t index) const {
+		switch (index) {
+		case 0: return X;
+		case 1: return Y;
+		case 2: return Z;
+		}
+		return 0;
+	}
+
+	inline void print() const {
+		printf("Vector3[%.3f, %.3f, %.3f]", X, Y, Z);
+	}
+
+	inline bool operator==(const Vector3& other) {
+		return X == other.X && Y == other.Y && Z == other.Z;
+	}
+
+	inline bool operator!=(const Vector3& other) {
+		return !operator==(other);
+	}
+
+	//inline double operator[](size_t index) const { 
+	//	switch (index) {
+	//	case 0: return X;
+	//	case 1: return Y;
+	//	case 2: return Z;
+	//	}
+	//	return 0;
+	//}
+	//inline double& operator[](size_t index) {
+	//	switch (index) {
+	//	case 0: return X;
+	//	case 1: return Y;
+	//	case 2: return Z;
+	//	default: return 0;
+	//	};
+	//}
 
 #undef X
 #undef Y

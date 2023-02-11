@@ -7,6 +7,18 @@
 
 #include "jello.h"
 #include "input.h"
+#include "Vector3.h"
+#include "Mat.h"
+
+static inline Vector3 getCameraPosition() {
+    return { R * cos(Phi) * cos(Theta), R * sin(Phi) * cos(Theta), R * sin(Theta) };
+}
+
+static inline Vector3 getMouseWorldPosition(int mouseX, int mouseY) {
+    Vector3 mouse = { (double)mouseX / windowWidth * 2.0 - 1.0, 1.0 - (double)mouseY / windowHeight * 2.0, -1 }, mouseWorld;
+    transform(inv, mouse, mouseWorld);
+    return mouseWorld;
+}
 
 /* Write a screenshot, in the PPM format, to the specified filename, in PPM format */
 void saveScreenshot(int windowWidth, int windowHeight, char *filename)
@@ -33,6 +45,11 @@ void saveScreenshot(int windowWidth, int windowHeight, char *filename)
   pic_free(in);
 }
 
+
+static Vector3 prevDir;
+static double dragForceRate = 1200;
+Vector3 dragForce;
+
 /* converts mouse drags into information about rotation/translation/scaling */
 void mouseMotionDrag(int x, int y)
 {
@@ -58,6 +75,18 @@ void mouseMotionDrag(int x, int y)
     g_vMousePos[0] = x;
     g_vMousePos[1] = y;
   }
+
+  if (hitI >= 0 && hitJ >= 0 && hitK >= 0) {
+      printf("Drag point: %d, %d, %d ", hitI, hitJ, hitK);
+      Vector3 camera = getCameraPosition(), mouseWorld = getMouseWorldPosition(x, y);
+      Vector3 curDir = (mouseWorld - camera).normalized();
+
+      dragForce = (curDir - prevDir) * dragForceRate;
+      dragForce.print();
+      puts("");
+
+      prevDir = curDir;
+  }
 }
 
 void mouseMotion (int x, int y)
@@ -66,12 +95,43 @@ void mouseMotion (int x, int y)
   g_vMousePos[1] = y;
 }
 
+
+int hitI = -1, hitJ = -1, hitK = -1;
+double mouseDownX = 0, mouseDownY = 0;
+
 void mouseButton(int button, int state, int x, int y)
 {
+    g_vMousePos[0] = x;
+    g_vMousePos[1] = y;
+    Vector3 mouseWorld, camera, collision;
   switch (button)
   {
     case GLUT_LEFT_BUTTON:
       g_iLeftMouseButton = (state==GLUT_DOWN);
+      if (g_iLeftMouseButton) {
+          updateMatrices();
+          mouseDownX = (double)x / windowWidth * 2.0 - 1.0;
+          mouseDownY = 1.0 - (double)y / windowHeight * 2.0;
+          mouseWorld = getMouseWorldPosition(x, y);
+          puts("");
+
+          camera = getCameraPosition();
+
+          prevDir = (mouseWorld - camera).normalized();
+
+          if (!rayCast(jello, prevDir, camera, hitI, hitJ, hitK)) {
+              hitI = -1;
+              hitJ = -1;
+              hitK = -1;
+              break;
+          }
+          printf("Hit on: %d, %d, %d", hitI, hitJ, hitK);
+
+      }
+      else {
+          hitI = -1; hitJ = -1; hitK = -1;
+          dragForce = Vector3::zero();
+      }
       break;
     case GLUT_MIDDLE_BUTTON:
       g_iMiddleMouseButton = (state==GLUT_DOWN);
@@ -81,8 +141,6 @@ void mouseButton(int button, int state, int x, int y)
       break;
   }
  
-  g_vMousePos[0] = x;
-  g_vMousePos[1] = y;
 }
 
 // gets called whenever a key is pressed
@@ -342,3 +400,7 @@ void writeWorld (char * fileName, struct world * jello)
   return;
 }
 
+
+
+
+//static void rayCast(const Vector3 &pos, const Vector3& up, const Vector3 &dir, )

@@ -301,6 +301,9 @@ void computeAcceleration(struct world * jello, struct point acc[8][8][8])
                 computeInnerForce(jello, i, j, k, cur);
                 computeCollision(jello, i, j, k, cur);
                 if (jello->incPlanePresent) computePlaneCollision(jello, i, j, k, cur);
+                if (i == hitI && j == hitJ && k == hitK) {
+                    cur += dragForce;
+                }
                 cur *= 1.0/jello->mass; 
                 acc[i][j][k] = cur.point();
             }

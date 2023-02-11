@@ -30,6 +30,10 @@ extern int sprite;
 extern int g_vMousePos[2];
 extern int g_iLeftMouseButton,g_iMiddleMouseButton,g_iRightMouseButton;
 
+
+extern double projection[4][4], view[4][4], inv[4][4];
+extern int windowWidth, windowHeight;
+
 struct point 
 {
    double x;
@@ -141,3 +145,11 @@ extern struct world jello;
 
 #endif
 
+class Vector3;
+extern void updateMatrices();
+extern void addForce(int i, int j, int k, const Vector3& force);
+extern bool rayCast(const world& world, const Vector3& ray, const Vector3& eye, int& ii, int& jj, int& kk);
+
+extern int hitI, hitJ, hitK;
+extern double mouseDownX, mouseDownY;
+extern Vector3 dragForce;
