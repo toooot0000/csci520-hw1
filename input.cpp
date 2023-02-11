@@ -47,8 +47,10 @@ void saveScreenshot(int windowWidth, int windowHeight, char *filename)
 
 
 static Vector3 prevDir;
-static double dragForceRate = 1200;
+double dragForceRate = 1500;
 Vector3 dragForce;
+
+bool isDragDebugging = false;
 
 /* converts mouse drags into information about rotation/translation/scaling */
 void mouseMotionDrag(int x, int y)
@@ -77,15 +79,15 @@ void mouseMotionDrag(int x, int y)
   }
 
   if (hitI >= 0 && hitJ >= 0 && hitK >= 0) {
-      printf("Drag point: %d, %d, %d ", hitI, hitJ, hitK);
       Vector3 camera = getCameraPosition(), mouseWorld = getMouseWorldPosition(x, y);
       Vector3 curDir = (mouseWorld - camera).normalized();
 
       dragForce = (curDir - prevDir) * dragForceRate;
-      dragForce.print();
-      puts("");
-
-      prevDir = curDir;
+      if (isDragDebugging) {
+          printf("Drag point: %d, %d, %d ", hitI, hitJ, hitK);
+          dragForce.print();
+          puts("");
+      }
   }
 }
 
@@ -125,7 +127,7 @@ void mouseButton(int button, int state, int x, int y)
               hitK = -1;
               break;
           }
-          printf("Hit on: %d, %d, %d", hitI, hitJ, hitK);
+          printf("Hit on: %d, %d, %d\n", hitI, hitJ, hitK);
 
       }
       else {

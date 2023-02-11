@@ -147,9 +147,8 @@ extern struct world jello;
 
 class Vector3;
 extern void updateMatrices();
-extern void addForce(int i, int j, int k, const Vector3& force);
 extern bool rayCast(const world& world, const Vector3& ray, const Vector3& eye, int& ii, int& jj, int& kk);
 
 extern int hitI, hitJ, hitK;
-extern double mouseDownX, mouseDownY;
+extern double mouseDownX, mouseDownY, dragForceRate;
 extern Vector3 dragForce;
